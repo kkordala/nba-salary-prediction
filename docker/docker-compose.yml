@@ -1,0 +1,44 @@
+services:
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.0
+    container_name: zookeeper
+    ports:
+      - "2181:2181"
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+
+  kafka:
+    image: confluentinc/cp-kafka:7.5.0
+    container_name: kafka
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+
+  spark:
+      image: jupyter/all-spark-notebook
+      container_name: spark
+      volumes:
+        - ../spark:/home/jovyan/work
+      user: root 
+      environment:
+        - CHOWN_HOME=yes
+      depends_on:
+        - kafka
+
+  bridge:
+      build: ../bridge_app
+      container_name: bridge_app
+      environment:
+        - PYTHONUNBUFFERED=1
+      ports:
+        - "5005:5005"
+      depends_on:
+        - kafka

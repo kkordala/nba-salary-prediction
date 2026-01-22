@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Spark Web Bridge</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+</head>
+<body>
+    <h1>Spark Live Stream</h1>
+    <input id="x" type="number" placeholder="X">
+    <input id="y" type="number" placeholder="Y">
+    <button onclick="sendData()">Send to Spark</button>
+
+    <div id="log" style="margin-top: 20px; font-family: monospace;"></div>
+
+    <script>
+        var socket = io();
+
+        function sendData() {
+            const xVal = document.getElementById('x').value;
+            const yVal = document.getElementById('y').value;
+
+            fetch('/send', { // Points to our new Flask route
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ x: parseInt(xVal), y: parseInt(yVal) })
+            })
+            .then(response => response.json())
+            .then(data => console.log('Sent:', data));
+        }
+
+        socket.on('new_result', function(msg) {
+            var item = document.createElement('div');
+            item.innerHTML = `✅ <b>Sum: ${msg.sum}</b> (from ${msg.x}+${msg.y})`;
+            document.getElementById('log').prepend(item);
+        });
+    </script>
+</body>
+</html>
