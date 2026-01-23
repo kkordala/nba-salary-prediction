@@ -2,7 +2,7 @@ command prompt:
 
 cd do /docker 
 
-docker-compose up -d --build
+docker-compose up --build -d
 
 jeszcze to 
 
@@ -17,3 +17,6 @@ docker exec -it spark spark-submit --packages org.apache.spark:spark-sql-kafka-0
 
 UI
 http://127.0.0.1:5005/
+
+po restarcie jeśli nie działa
+docker exec -it spark rm -rf /home/jovyan/work/checkpoints
