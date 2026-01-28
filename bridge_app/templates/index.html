@@ -1,37 +1,531 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Spark Web Bridge</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NBA Salary Predictor</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
-</head>
-<body>
-    <h1>Spark Live Stream</h1>
-    <input id="x" type="number" placeholder="X">
-    <input id="y" type="number" placeholder="Y">
-    <button onclick="sendData()">Send to Spark</button>
-
-    <div id="log" style="margin-top: 20px; font-family: monospace;"></div>
-
-    <script>
-        var socket = io();
-
-        function sendData() {
-            const xVal = document.getElementById('x').value;
-            const yVal = document.getElementById('y').value;
-
-            fetch('/send', { // Points to our new Flask route
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ x: parseInt(xVal), y: parseInt(yVal) })
-            })
-            .then(response => response.json())
-            .then(data => console.log('Sent:', data));
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
         }
 
-        socket.on('new_result', function(msg) {
-            var item = document.createElement('div');
-            item.innerHTML = `✅ <b>Sum: ${msg.sum}</b> (from ${msg.x}+${msg.y})`;
-            document.getElementById('log').prepend(item);
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 40px;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            margin-bottom: 30px;
+        }
+
+        .input-section h2 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+        }
+
+        .input-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .input-group label {
+            font-size: 0.9em;
+            font-weight: 600;
+            color: #555;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .input-group input {
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 1em;
+            transition: all 0.3s;
+        }
+
+        .input-group input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .predict-btn {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .predict-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .predict-btn:active {
+            transform: translateY(0);
+        }
+
+        .predict-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .results-section {
+            display: none;
+        }
+
+        .results-section.visible {
+            display: block;
+        }
+
+        .prediction-box {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 12px;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .prediction-box h3 {
+            font-size: 1.2em;
+            margin-bottom: 15px;
+            opacity: 0.9;
+        }
+
+        .salary-amount {
+            font-size: 3em;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .salary-range {
+            font-size: 1em;
+            opacity: 0.8;
+        }
+
+        .similar-players h3 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+        }
+
+        .players-grid {
+            display: grid;
+            gap: 15px;
+        }
+
+        .player-card {
+            background: #f8f9fa;
+            border-left: 4px solid #667eea;
+            padding: 20px;
+            border-radius: 8px;
+            display: grid;
+            grid-template-columns: auto 1fr auto;
+            gap: 20px;
+            align-items: center;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .player-photo {
+            width: 90px;
+            height: 135px;
+            border-radius: 10%;
+            object-fit: cover;
+            border: 3px solid #667eea;
+            background: white;
+        }
+
+        .player-photo-error {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 2em;
+            font-weight: bold;
+        }
+
+        .player-card:hover {
+            transform: translateX(5px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .player-info h4 {
+            color: #333;
+            font-size: 1.2em;
+            margin-bottom: 8px;
+        }
+
+        .player-details {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            margin-bottom: 5px;
+        }
+
+        .detail-badge {
+            background: white;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            color: #666;
+            font-weight: 500;
+        }
+
+        .player-team {
+            color: #666;
+            font-size: 0.9em;
+            margin-top: 5px;
+        }
+
+        .player-salary {
+            text-align: right;
+        }
+
+        .player-salary .amount {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .player-salary .label {
+            font-size: 0.85em;
+            color: #999;
+            margin-top: 5px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #667eea;
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error-message {
+            background: #fee;
+            color: #c33;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid #c33;
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2em;
+            }
+
+            .input-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .salary-amount {
+                font-size: 2em;
+            }
+
+            .player-card {
+                grid-template-columns: auto 1fr;
+            }
+
+            .player-salary {
+                grid-column: 2 / 3;
+                text-align: left;
+                margin-top: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>NBA Salary Predictor</h1>
+            <p>Enter player statistics to predict their market value</p>
+        </div>
+
+        <div class="card input-section">
+            <h2>Player Statistics</h2>
+            <div class="input-grid">
+                <div class="input-group">
+                    <label for="age">Age</label>
+                    <input id="age" type="number" placeholder="e.g., 25" step="1" min="18" max="45">
+                </div>
+                <div class="input-group">
+                    <label for="ppg">PPG (Points)</label>
+                    <input id="ppg" type="number" placeholder="e.g., 20.5" step="0.1" min="0">
+                </div>
+                <div class="input-group">
+                    <label for="fg_avg">FG% (Field Goal)</label>
+                    <input id="fg_avg" type="number" placeholder="e.g., 0.45" step="0.001" min="0" max="1">
+                </div>
+                <div class="input-group">
+                    <label for="three_pt_avg">3P% (Three Point)</label>
+                    <input id="three_pt_avg" type="number" placeholder="e.g., 0.35" step="0.001" min="0" max="1">
+                </div>
+                <div class="input-group">
+                    <label for="ft_avg">FT% (Free Throw)</label>
+                    <input id="ft_avg" type="number" placeholder="e.g., 0.80" step="0.001" min="0" max="1">
+                </div>
+                <div class="input-group">
+                    <label for="apg">APG (Assists)</label>
+                    <input id="apg" type="number" placeholder="e.g., 5.0" step="0.1" min="0">
+                </div>
+                <div class="input-group">
+                    <label for="rpg">RPG (Rebounds)</label>
+                    <input id="rpg" type="number" placeholder="e.g., 7.0" step="0.1" min="0">
+                </div>
+                <div class="input-group">
+                    <label for="spg">SPG (Steals)</label>
+                    <input id="spg" type="number" placeholder="e.g., 1.5" step="0.1" min="0">
+                </div>
+                <div class="input-group">
+                    <label for="bpg">BPG (Blocks)</label>
+                    <input id="bpg" type="number" placeholder="e.g., 1.0" step="0.1" min="0">
+                </div>
+                <div class="input-group">
+                    <label for="mpg">MPG (Minutes)</label>
+                    <input id="mpg" type="number" placeholder="e.g., 32.0" step="0.1" min="0">
+                </div>
+            </div>
+            <button class="predict-btn" onclick="sendData()">Predict Salary</button>
+        </div>
+
+        <div id="loading" class="card loading" style="display: none;">
+            <div class="spinner"></div>
+            <p>Analyzing player statistics...</p>
+        </div>
+
+        <div id="error" class="card" style="display: none;">
+            <div class="error-message"></div>
+        </div>
+
+        <div id="results" class="card results-section">
+            <div class="prediction-box">
+                <h3>Predicted Salary</h3>
+                <div class="salary-amount" id="predicted-salary">$0</div>
+                <div class="salary-range" id="salary-range">Range: $0 - $0</div>
+            </div>
+
+            <div class="similar-players">
+                <h3>Similarly Payed Players</h3>
+                <div class="players-grid" id="players-container"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const socket = io();
+
+        function formatCurrency(amount) {
+            return new Intl.NumberFormat('en-US', {
+                style: 'currency',
+                currency: 'USD',
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 0
+            }).format(amount);
+        }
+
+        function sendData() {
+            // Get all input values
+            const inputs = {
+                age: document.getElementById("age"),
+                ppg: document.getElementById("ppg"),
+                fg_avg: document.getElementById("fg_avg"),
+                three_pt_avg: document.getElementById("three_pt_avg"),
+                ft_avg: document.getElementById("ft_avg"),
+                apg: document.getElementById("apg"),
+                rpg: document.getElementById("rpg"),
+                spg: document.getElementById("spg"),
+                bpg: document.getElementById("bpg"),
+                mpg: document.getElementById("mpg")
+            };
+
+            // Validate inputs
+            for (let key in inputs) {
+                if (!inputs[key].value || inputs[key].value === '') {
+                    showError('Please fill in all fields');
+                    return;
+                }
+            }
+
+            // Hide previous results and errors
+            document.getElementById('results').classList.remove('visible');
+            document.getElementById('error').style.display = 'none';
+            document.getElementById('loading').style.display = 'block';
+
+            // Prepare data
+            const data = {};
+            for (let key in inputs) {
+                data[key] = parseFloat(inputs[key].value);
+            }
+
+            // Send to server
+            fetch('/send', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Server error: ' + response.status);
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log('Data sent successfully:', data);
+            })
+            .catch(error => {
+                console.error('Error sending data:', error);
+                document.getElementById('loading').style.display = 'none';
+                showError('Failed to send data: ' + error.message);
+            });
+        }
+
+        function showError(message) {
+            const errorDiv = document.getElementById('error');
+            errorDiv.querySelector('.error-message').textContent = message;
+            errorDiv.style.display = 'block';
+            setTimeout(() => {
+                errorDiv.style.display = 'none';
+            }, 5000);
+        }
+
+        function displayResults(data) {
+            document.getElementById('loading').style.display = 'none';
+
+            // Display predicted salary
+            const predictedSalary = data.avg;
+            const std = data.std;
+            const lowerBound = predictedSalary - std;
+            const upperBound = predictedSalary + std;
+
+            document.getElementById('predicted-salary').textContent = formatCurrency(predictedSalary);
+            document.getElementById('salary-range').textContent = 
+                `Range: ${formatCurrency(lowerBound)} - ${formatCurrency(upperBound)}`;
+
+            // Display similar players
+            const playersContainer = document.getElementById('players-container');
+            playersContainer.innerHTML = '';
+
+            if (data.similar_players && data.similar_players.length > 0) {
+                data.similar_players.forEach(player => {
+                    const playerCard = document.createElement('div');
+                    playerCard.className = 'player-card';
+                    
+                    // Get player initials for fallback
+                    const initials = player.name.split(' ').map(n => n[0]).join('');
+                    const imageUrl = `https://www.basketball-reference.com/req/202106291/images/headshots/${player.slug}.jpg`;
+                    
+                    playerCard.innerHTML = `
+                        <img 
+                            src="${imageUrl}" 
+                            alt="${player.name}" 
+                            class="player-photo"
+                            onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
+                        >
+                        <div class="player-photo-error" style="display: none;">${initials}</div>
+                        <div class="player-info">
+                            <h4><a href="https://www.basketball-reference.com/players/${player.slug.charAt(0).toLowerCase()}/${player.slug}/gamelog/${player.season}/">${player.name}</a></h4>
+                            <div class="player-details">
+                                <span class="detail-badge">${player.positions}</span>
+                                <span class="detail-badge">Season ${player.season}</span>
+                            </div>
+                            <div class="player-team">${player.team}</div>
+                        </div>
+                        <div class="player-salary">
+                            <div class="amount">${formatCurrency(player.salary)}</div>
+                            <div class="label">Actual Salary</div>
+                        </div>
+                    `;
+                    
+                    playersContainer.appendChild(playerCard);
+                });
+            } else {
+                playersContainer.innerHTML = '<p style="text-align: center; color: #999;">No similar players found</p>';
+            }
+
+            // Show results
+            document.getElementById('results').classList.add('visible');
+            
+            // Scroll to results
+            document.getElementById('results').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+
+        // Listen for results from server
+        socket.on('new_result', function(data) {
+            console.log('Received prediction:', data);
+            displayResults(data);
+        });
+
+        // Allow Enter key to submit
+        document.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                sendData();
+            }
         });
     </script>
 </body>

@@ -1,0 +1,1 @@
+{"class":"org.apache.spark.ml.feature.SQLTransformer","timestamp":1769476626543,"sparkVersion":"3.5.0","uid":"SQLTransformer_491ebbba0e83","paramMap":{"statement":"SELECT *, log1p(salary) AS salary_log FROM __THIS__"},"defaultParamMap":{}}

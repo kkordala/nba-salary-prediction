@@ -27,9 +27,17 @@ services:
       container_name: spark
       volumes:
         - ../spark:/home/jovyan/work
+        - ../notebooks:/home/jovyan/notebooks
+        - ../data:/home/jovyan/data
+        - ../models:/home/jovyan/models
       user: root 
+      ports:
+      - "8888:8888"  # Jupyter Notebook
+      - "4040:4040"  # Spark UI
       environment:
-        - CHOWN_HOME=yes
+        - CHOWN_HOME=yes  
+        - JUPYTER_ENABLE_LAB=yes
+      command: start-notebook.sh --NotebookApp.token='' --NotebookApp.password=''
       depends_on:
         - kafka
 
