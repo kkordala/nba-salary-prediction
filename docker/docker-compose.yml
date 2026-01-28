@@ -7,12 +7,18 @@ services:
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
+    healthcheck:
+      test: ["CMD", "bash", "-c", "echo ruok | nc localhost 2181"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
 
   kafka:
     image: confluentinc/cp-kafka:7.5.0
     container_name: kafka
     depends_on:
-      - zookeeper
+      zookeeper:
+        condition: service_healthy
     ports:
       - "9092:9092"
     environment:
@@ -21,6 +27,26 @@ services:
       KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    healthcheck:
+      test: ["CMD", "kafka-broker-api-versions", "--bootstrap-server", "localhost:9092"]
+      interval: 5s
+      timeout: 10s
+      retries: 10
+
+  kafka-init:
+    image: confluentinc/cp-kafka:7.5.0
+    container_name: kafka-init
+    depends_on:
+      kafka:
+        condition: service_healthy
+    entrypoint: ['/bin/sh', '-c']
+    command: |
+      "
+      echo 'Creating Kafka topics...'
+      kafka-topics --create --if-not-exists --topic raw-events --bootstrap-server kafka:9092 --partitions 1 --replication-factor 1
+      kafka-topics --create --if-not-exists --topic processed-events --bootstrap-server kafka:9092 --partitions 1 --replication-factor 1
+      echo 'Kafka topics created successfully'
+      "
 
   spark:
       image: jupyter/all-spark-notebook
@@ -38,8 +64,31 @@ services:
         - CHOWN_HOME=yes  
         - JUPYTER_ENABLE_LAB=yes
       command: start-notebook.sh --NotebookApp.token='' --NotebookApp.password=''
+      healthcheck:
+        test: ["CMD", "curl", "-f", "http://localhost:8888"]
+        interval: 5s
+        timeout: 3s
+        retries: 10
+        start_period: 30s
       depends_on:
-        - kafka
+        kafka:
+          condition: service_healthy
+
+  spark-submit:
+    image: jupyter/all-spark-notebook
+    container_name: spark-submit
+    volumes:
+      - ../spark:/home/jovyan/work
+      - ../data:/home/jovyan/data
+      - ../models:/home/jovyan/models
+    user: root
+    depends_on:
+      kafka-init:
+        condition: service_completed_successfully
+      spark:
+        condition: service_healthy
+    command: >
+      spark-submit --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.0 /home/jovyan/work/spark_streaming.py
 
   bridge:
       build: ../bridge_app
@@ -49,4 +98,5 @@ services:
       ports:
         - "5005:5005"
       depends_on:
-        - kafka
+        kafka:
+          condition: service_healthy

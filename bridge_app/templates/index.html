@@ -457,16 +457,56 @@
         function displayResults(data) {
             document.getElementById('loading').style.display = 'none';
 
+            const SUPERMAX = 54126450;
+            
             // Display predicted salary
-            const predictedSalary = data.avg;
+            let predictedSalary = data.avg;
             const std = data.std;
-            const lowerBound = predictedSalary - std;
-            const upperBound = predictedSalary + std;
+            let lowerBound = predictedSalary - std;
+            let upperBound = predictedSalary + std;
+            
+            let supermaxNote = '';
+            
+            document.getElementById('predicted-salary').style.background = ''; 
+            document.getElementById('predicted-salary').style.webkitBackgroundClip = ''; 
+            document.getElementById('predicted-salary').style.webkitTextFillColor = ''; 
+            document.getElementById('predicted-salary').style.backgroundClip = '';
 
-            document.getElementById('predicted-salary').textContent = formatCurrency(predictedSalary);
-            document.getElementById('salary-range').textContent = 
-                `Range: ${formatCurrency(lowerBound)} - ${formatCurrency(upperBound)}`;
+            // Check if prediction exceeds supermax
+            if (lowerBound > SUPERMAX) {
+                // Case 1: Even lower bound exceeds supermax
+                predictedSalary = SUPERMAX;
+                lowerBound = SUPERMAX;
+                upperBound = SUPERMAX;
+                supermaxNote = '<div style="margin-top: 15px; font-size: 0.9em; opacity: 0.95; line-height: 1.5;"> <strong>Supermax Contract</strong><br>This player qualifies for the NBA\'s maximum salary (35% of salary cap for 10+ year veterans). The supermax is the highest possible contract in the NBA.</div>';
+                document.getElementById('predicted-salary').textContent = formatCurrency(predictedSalary);
+                document.getElementById('predicted-salary').style.background = 'linear-gradient(135deg, #FFD700, #FFA500)'; 
+                document.getElementById('predicted-salary').style.webkitBackgroundClip = 'text'; 
+                document.getElementById('predicted-salary').style.webkitTextFillColor = 'transparent'; 
+                document.getElementById('predicted-salary').style.backgroundClip = 'text';
+                document.getElementById('salary-range').innerHTML = `${supermaxNote}`;
+            } else if (predictedSalary > SUPERMAX) {
+                // Case 2: Prediction exceeds supermax but lower bound doesn't
+                upperBound = SUPERMAX;
+                supermaxNote = '<div style="margin-top: 15px; font-size: 0.9em; opacity: 0.95; line-height: 1.5;"> <strong>Capped at Supermax</strong><br>The predicted range has been capped at the NBA supermax contract ($54.1M), which is the highest salary a player can earn under current CBA rules.</div>';
+                document.getElementById('predicted-salary').textContent = formatCurrency(SUPERMAX);
+                document.getElementById('salary-range').innerHTML = 
+                    `Lower bound of expected salary: ${formatCurrency(lowerBound)} ${supermaxNote}`;
 
+            } else if (upperBound > SUPERMAX) {
+                // Case 3: Upper bound exceeds supermax
+                upperBound = SUPERMAX;
+                supermaxNote = '<div style="margin-top: 15px; font-size: 0.9em; opacity: 0.95; line-height: 1.5;"> <strong>Upper Bound Capped</strong><br>The upper range has been adjusted to the NBA supermax contract ($54.1M), the maximum allowable salary.</div>';
+                document.getElementById('predicted-salary').textContent = formatCurrency(predictedSalary);
+                document.getElementById('salary-range').innerHTML = 
+                    `Range: ${formatCurrency(lowerBound)} - ${formatCurrency(upperBound)}${supermaxNote}`;
+
+            } else {
+                document.getElementById('predicted-salary').textContent = formatCurrency(predictedSalary);
+                document.getElementById('salary-range').innerHTML = 
+                   `Range: ${formatCurrency(lowerBound)} - ${formatCurrency(upperBound)}${supermaxNote}`;
+            }
+            
             // Display similar players
             const playersContainer = document.getElementById('players-container');
             playersContainer.innerHTML = '';

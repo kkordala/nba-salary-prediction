@@ -11,4 +11,5 @@ COPY . .
 EXPOSE 5005
 
 # Use -u to force unbuffered logs
-CMD ["python", "-u", "bridge.py"]
+# sleep 60 to wait for spark-submit to setup
+CMD sleep 60 && python -u bridge.py
