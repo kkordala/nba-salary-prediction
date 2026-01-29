@@ -1,0 +1,9 @@
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+spark/checkpoints/
+spark/checkpoints_new/
+docker/data/
+data/processed/
+data/raw
+*.json
