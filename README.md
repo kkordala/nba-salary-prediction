@@ -92,7 +92,7 @@ App (Producer) → Kafka → Spark Structured Streaming → Kafka → App (Consu
 
 Player statistics are sent as JSON events, processed in Spark, and streamed back to the application with salary predictions and similar-player results.
 
-![Architecture diagram](assets\big-data-diagram.drawio.png)
+![System Architecture](assets/diagram.png)
 
 ## Technology
 
