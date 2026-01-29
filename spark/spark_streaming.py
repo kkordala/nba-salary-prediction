@@ -81,7 +81,7 @@ predictions = predictions \
 broadcast_data = spark.sparkContext.broadcast(
     raw_data.select("name","positions","team","season","salary","slug").collect()
 )
-# 
+
 def find_similar_players(pred_salary):
     """Find 3 players with closest salaries to prediction"""
     if pred_salary is None:
