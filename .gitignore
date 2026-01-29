@@ -4,6 +4,6 @@ __pycache__/
 spark/checkpoints/
 spark/checkpoints_new/
 docker/data/
-*.csv
-*.parquet
+data/processed/
+data/raw
 *.json
