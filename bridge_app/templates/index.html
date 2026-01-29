@@ -458,7 +458,7 @@
             document.getElementById('loading').style.display = 'none';
 
             const SUPERMAX = 54126450;
-            
+            const ROOKIE = 2048494
             // Display predicted salary
             let predictedSalary = data.avg;
             const std = data.std;
@@ -466,18 +466,30 @@
             let upperBound = predictedSalary + std;
             
             let supermaxNote = '';
+            let rookieNote = ''
             
             document.getElementById('predicted-salary').style.background = ''; 
             document.getElementById('predicted-salary').style.webkitBackgroundClip = ''; 
             document.getElementById('predicted-salary').style.webkitTextFillColor = ''; 
             document.getElementById('predicted-salary').style.backgroundClip = '';
 
+            // Check if prediction is below the minimum
+            if (predictedSalary < ROOKIE) {
+                // Case 1: Prediction is below the minimum contract
+                rookieNote = '<div style="margin-top: 15px; font-size: 0.9em; opacity: 0.95; line-height: 1.5;"> <strong>Rookie Salary</strong><br>This player would probably get the minimum salary, if he was signed after such season performance. The predicted salary is below the minimum salary for a player who played only one year in the league. The minimum salary increases with years of service in the league. </div>';
+                document.getElementById('predicted-salary').textContent = formatCurrency(ROOKIE);
+                document.getElementById('salary-range').innerHTML = `${rookieNote}`;
+            }
+            else if (lowerBound < ROOKIE) {
+                // Case 2: Lower bound is below  
+                rookieNote = '<div style="margin-top: 15px; font-size: 0.9em; opacity: 0.95; line-height: 1.5;"> <strong>Lower Bound Capped</strong><br>The lower range has been adjusted to the NBA minimum contract ($2.05M) after one year of service .</div>';
+                document.getElementById('predicted-salary').textContent = formatCurrency(ROOKIE);
+                document.getElementById('salary-range').innerHTML = `${formatCurrency(ROOKIE)} - ${formatCurrency(upperBound)}${rookieNote}`;
+            }
             // Check if prediction exceeds supermax
-            if (lowerBound > SUPERMAX) {
+            else if (lowerBound > SUPERMAX) {
                 // Case 1: Even lower bound exceeds supermax
                 predictedSalary = SUPERMAX;
-                lowerBound = SUPERMAX;
-                upperBound = SUPERMAX;
                 supermaxNote = '<div style="margin-top: 15px; font-size: 0.9em; opacity: 0.95; line-height: 1.5;"> <strong>Supermax Contract</strong><br>This player qualifies for the NBA\'s maximum salary (35% of salary cap for 10+ year veterans). The supermax is the highest possible contract in the NBA.</div>';
                 document.getElementById('predicted-salary').textContent = formatCurrency(predictedSalary);
                 document.getElementById('predicted-salary').style.background = 'linear-gradient(135deg, #FFD700, #FFA500)'; 
@@ -487,9 +499,12 @@
                 document.getElementById('salary-range').innerHTML = `${supermaxNote}`;
             } else if (predictedSalary > SUPERMAX) {
                 // Case 2: Prediction exceeds supermax but lower bound doesn't
-                upperBound = SUPERMAX;
                 supermaxNote = '<div style="margin-top: 15px; font-size: 0.9em; opacity: 0.95; line-height: 1.5;"> <strong>Capped at Supermax</strong><br>The predicted range has been capped at the NBA supermax contract ($54.1M), which is the highest salary a player can earn under current CBA rules.</div>';
-                document.getElementById('predicted-salary').textContent = formatCurrency(SUPERMAX);
+                document.getElementById('predicted-salary').textContent = formatCurrency(predictedSalary);
+                document.getElementById('predicted-salary').style.background = 'linear-gradient(135deg, #FFD700, #FFA500)'; 
+                document.getElementById('predicted-salary').style.webkitBackgroundClip = 'text'; 
+                document.getElementById('predicted-salary').style.webkitTextFillColor = 'transparent'; 
+                document.getElementById('predicted-salary').style.backgroundClip = 'text';
                 document.getElementById('salary-range').innerHTML = 
                     `Lower bound of expected salary: ${formatCurrency(lowerBound)} ${supermaxNote}`;
 
